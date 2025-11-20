@@ -1,0 +1,50 @@
+version: "2.4"
+
+services:
+  mariadb:
+    image: bitnami/mariadb:11.3
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+    command:
+      - --transaction-isolation=${MARIADB_TRANSACTION_ISOLATION}
+      - --binlog-format=${MARIADB_BINLOG_FORMAT}
+      - --innodb-log-file-size=${MARIADB_INNODB_LOG_FILE_SIZE}
+      - --innodb-buffer-pool-size=${MARIADB_INNODB_BUFFER_POOL_SIZE}
+      - --character-set-server=${MARIADB_CHARACTER_SET}
+      - --collation-server=${MARIADB_COLLATE}
+    volumes:
+      - mariadb_data:/bitnami/mariadb
+
+  redis:
+    image: bitnami/redis:7.4
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - ALLOW_EMPTY_PASSWORD=${ALLOW_EMPTY_PASSWORD}
+    volumes:
+      - redis_data:/bitnami/redis
+
+  moodle:
+    image: bitnami/moodle:${MOODLE_VERSION}
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${HTTP_PORT}:8080"
+    depends_on:
+      - mariadb
+      - redis
+    volumes:
+      - moodle_app:/bitnami/moodle
+      - moodle_data:/bitnami/moodledata
+
+volumes:
+  mariadb_data:
+  redis_data:
+  moodle_app:
+  moodle_data:
