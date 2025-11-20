@@ -1,0 +1,28 @@
+# Arquivos de ambiente
+.env
+
+# Dados dos volumes Docker
+mariadb_data/
+redis_data/
+moodle_app/
+moodle_data/
+
+# Logs
+*.log
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs e editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Backups
+*.bak
+*.backup
+*.tmp

@@ -1,6 +1,47 @@
-version: "2.4"
-
 services:
+  moodle:
+    image: bitnami/moodle:${MOODLE_VERSION}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MOODLE_DATABASE_TYPE=mariadb
+      - MOODLE_DATABASE_HOST=${MARIADB_HOST}
+      - MOODLE_DATABASE_PORT_NUMBER=${MARIADB_PORT}
+      - MOODLE_DATABASE_NAME=${MARIADB_DATABASE}
+      - MOODLE_DATABASE_USER=${MARIADB_USER}
+      - MOODLE_DATABASE_PASSWORD=${MARIADB_PASSWORD}
+      - MOODLE_USERNAME=${MOODLE_ADMIN_USER}
+      - MOODLE_PASSWORD=${MOODLE_ADMIN_PASSWORD}
+      - MOODLE_EMAIL=${MOODLE_ADMIN_EMAIL}
+      - MOODLE_SITE_NAME=${MOODLE_SITE_NAME}
+      - MOODLE_LANG=${MOODLE_LANG}
+      - MOODLE_REDIS_HOST=${REDIS_HOST}
+      - MOODLE_REDIS_PORT_NUMBER=${REDIS_PORT}
+      - MOODLE_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - PHP_MEMORY_LIMIT=${PHP_MEMORY_LIMIT}
+      - PHP_MAX_EXECUTION_TIME=${PHP_MAX_EXECUTION_TIME}
+      - PHP_UPLOAD_MAX_FILESIZE=${PHP_UPLOAD_MAX_FILESIZE}
+      - PHP_POST_MAX_SIZE=${PHP_POST_MAX_SIZE}
+    ports:
+      - "${HTTP_PORT}:8080"
+      - "${HTTPS_PORT}:8443"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - moodle_app:/bitnami/moodle
+      - moodle_data:/bitnami/moodledata
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login/index.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - moodle-network
+
   mariadb:
     image: bitnami/mariadb:11.3
     restart: unless-stopped
@@ -19,6 +60,13 @@ services:
       - --collation-server=${MARIADB_COLLATE}
     volumes:
       - mariadb_data:/bitnami/mariadb
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - moodle-network
 
   redis:
     image: bitnami/redis:7.4
@@ -29,22 +77,20 @@ services:
       - ALLOW_EMPTY_PASSWORD=${ALLOW_EMPTY_PASSWORD}
     volumes:
       - redis_data:/bitnami/redis
-
-  moodle:
-    image: bitnami/moodle:${MOODLE_VERSION}
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "${HTTP_PORT}:8080"
-    depends_on:
-      - mariadb
-      - redis
-    volumes:
-      - moodle_app:/bitnami/moodle
-      - moodle_data:/bitnami/moodledata
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - moodle-network
 
 volumes:
   mariadb_data:
   redis_data:
   moodle_app:
   moodle_data:
+
+networks:
+  moodle-network:
+    driver: bridge
